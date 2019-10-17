@@ -1,0 +1,186 @@
+#!/bin/bash
+
+topdir=stats
+db=ces.sqlite
+
+set -eu
+
+cd "$(dirname "$0")"
+
+
+select_into() {
+	outfile=$1
+	shift
+	header=
+	if [[ $1 = -header ]]; then
+		header=-header
+		shift
+	fi
+	sqlite3 -bail -separator $'\t' $header \
+		$db \
+		"SELECT DISTINCT $*;" \
+		> $topdir/"$outfile.tab"
+}
+
+
+if [[ ! -f $db ]]; then
+	./updatedbs
+fi
+
+
+mkdir -p $topdir/{topo,fact,join,topo-not-fact,fact-not-topo}
+find $topdir/ -type f -name \*.tab -exec rm -f {} +
+
+select_into topo/active-prod-us     "fqdn FROM topology WHERE active=1 AND prod=1 AND us=1     ORDER BY fqdn"
+select_into topo/active-prod-nonus  "fqdn FROM topology WHERE active=1 AND prod=1 AND us=0     ORDER BY fqdn"
+select_into topo/active-prod-hosted "fqdn FROM topology WHERE active=1 AND prod=1 AND hosted=1 ORDER BY fqdn"
+select_into fact/active-prod-us     "fqdn FROM factory WHERE enabled=1 AND prod=1 AND us=1     ORDER BY fqdn"
+select_into fact/active-prod-nonus  "fqdn FROM factory WHERE enabled=1 AND prod=1 AND us=0     ORDER BY fqdn"
+select_into fact/active-prod-hosted "fqdn FROM factory WHERE enabled=1 AND prod=1 AND hosted=1 ORDER BY fqdn"
+
+select_into join/active-prod-us         "t.fqdn FROM topology AS t JOIN factory AS f USING(fqdn) WHERE t.active=1 AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.us=1     ORDER BY t.fqdn"
+select_into join/active-prod-nonus      "t.fqdn FROM topology AS t JOIN factory AS f USING(fqdn) WHERE t.active=1 AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.us=0     ORDER BY t.fqdn"
+select_into join/active-prod-hosted     "t.fqdn FROM topology AS t JOIN factory AS f USING(fqdn) WHERE t.active=1 AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.hosted=1 ORDER BY t.fqdn"
+
+select_into topo-not-fact/active-prod-us   "
+	fqdn_topology
+	FROM joined
+	WHERE active_topology=1
+	AND prod_topology=1
+	AND us=1
+	AND (SELECT COUNT(*)
+	     FROM factory
+	     WHERE fqdn=fqdn_topology
+	     AND enabled=active_topology
+	     AND prod=prod_topology)=0
+	ORDER BY fqdn_topology"
+
+select_into topo-not-fact/active-prod-nonus "
+	fqdn_topology
+	FROM joined
+	WHERE active_topology=1
+	AND prod_topology=1
+	AND us=0
+	AND (SELECT COUNT(*)
+	     FROM factory
+	     WHERE fqdn=fqdn_topology
+	     AND enabled=active_topology
+	     AND prod=prod_topology)=0
+	ORDER BY fqdn_topology"
+
+select_into topo-not-fact/active-prod-hosted "
+	fqdn_topology
+	FROM joined
+	WHERE active_topology=1
+	AND prod_topology=1
+	AND hosted_ce=1
+	AND (SELECT COUNT(*)
+	     FROM factory
+	     WHERE fqdn=fqdn_topology
+	     AND enabled=active_topology
+	     AND prod=prod_topology)=0
+	ORDER BY fqdn_topology"
+
+select_into fact-not-topo/active-prod-us   "
+	fqdn_factory
+	FROM joined
+	WHERE active_factory=1
+	AND prod_factory=1
+	AND us=1
+	AND (SELECT COUNT(*)
+	     FROM topology
+	     WHERE fqdn=fqdn_factory
+	     AND active=active_factory
+	     AND prod=prod_factory)=0
+	ORDER BY fqdn_factory"
+
+select_into fact-not-topo/active-prod-nonus "
+	fqdn_factory
+	FROM joined
+	WHERE active_factory=1
+	AND prod_factory=1
+	AND us=0
+	AND (SELECT COUNT(*)
+	     FROM topology
+	     WHERE fqdn=fqdn_factory
+	     AND active=active_factory
+	     AND prod=prod_factory)=0
+	ORDER BY fqdn_factory"
+
+select_into fact-not-topo/active-prod-hosted "
+	fqdn_factory
+	FROM joined
+	WHERE active_factory=1
+	AND prod_factory=1
+	AND hosted_ce=1
+	AND (SELECT COUNT(*)
+	     FROM topology
+	     WHERE fqdn=fqdn_factory
+	     AND active=active_factory
+	     AND prod=prod_factory)=0
+	ORDER BY fqdn_factory"
+
+select_into joined -header "* FROM joined ORDER BY fqdn_topology, fqdn_factory"
+
+
+### UNUSED:
+#mkdir -p $topdir/{topo-undef-fact,fact-undef-topo}
+#
+#select_into topo-undef-fact/active-prod-us   "
+#	fqdn_topology
+#	FROM joined
+#	WHERE fqdn_factory IS NULL
+#	AND active_topology=1
+#	AND prod_topology=1
+#	AND us=1
+#	ORDER BY fqdn_topology"
+#
+#select_into topo-undef-fact/active-prod-nonus "
+#	fqdn_topology
+#	FROM joined
+#	WHERE fqdn_factory IS NULL
+#	AND active_topology=1
+#	AND prod_topology=1
+#	AND us=0
+#	ORDER BY fqdn_topology"
+#
+#select_into topo-undef-fact/active-prod-hosted "
+#	fqdn_topology
+#	FROM joined
+#	WHERE fqdn_factory IS NULL
+#	AND active_topology=1
+#	AND prod_topology=1
+#	AND hosted_ce=1
+#	ORDER BY fqdn_topology"
+#
+#select_into fact-undef-topo/active-prod-us    "
+#	fqdn_factory
+#	FROM joined
+#	WHERE fqdn_topology IS NULL
+#	AND active_factory=1
+#	AND prod_factory=1
+#	AND us=1
+#	ORDER BY fqdn_factory"
+#
+#select_into fact-undef-topo/active-prod-nonus "
+#	fqdn_factory
+#	FROM joined
+#	WHERE fqdn_topology IS NULL
+#	AND active_factory=1
+#	AND prod_factory=1
+#	AND us=0
+#	ORDER BY fqdn_factory"
+#
+#select_into fact-undef-topo/active-prod-hosted "
+#	fqdn_factory
+#	FROM joined
+#	WHERE fqdn_topology IS NULL
+#	AND active_factory=1
+#	AND prod_factory=1
+#	AND hosted_ce=1
+#	ORDER BY fqdn_factory"
+
+echo "results in $topdir/"
+find $topdir/ -type f -name \*.tab | sort | xargs wc -l
+
+# vim:noet:sw=8:sts=8:ts=8
