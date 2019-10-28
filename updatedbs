@@ -54,6 +54,24 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 	LEFT JOIN topology USING(fqdn)
 	WHERE topology.fqdn IS NULL
 	;
+
+	CREATE VIEW joined_prod AS
+	SELECT
+		fqdn_topology,
+		fqdn_factory,
+		resource_name,
+		factory_entry,
+		ce_type,
+		contact_string,
+		active_topology,
+		active_factory,
+		us,
+		hosted_ce,
+		resource_group
+	FROM joined
+	WHERE prod_topology=1
+	AND prod_factory=1
+	;
 	__END__
 
 # vim:noet:sw=8:sts=8:ts=8
