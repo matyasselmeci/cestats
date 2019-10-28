@@ -16,6 +16,7 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 	CREATE TABLE factory AS SELECT * FROM gf.entry;
 	ATTACH DATABASE "resources.sqlite" AS res;
 	CREATE TABLE topology AS SELECT * FROM res.ce;
+	CREATE TABLE resourcegroup AS SELECT * FROM res.resourcegroup;
 
 	CREATE VIEW joined AS
 	SELECT
