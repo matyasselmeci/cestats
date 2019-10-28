@@ -97,6 +97,22 @@ def main():
         INNER JOIN service ON resource.name = service.resource_name
         WHERE service.name = "CE"
         ;
+
+        DROP VIEW IF EXISTS submit_node;
+
+        CREATE VIEW submit_node
+        AS
+        SELECT
+            resource.name,
+            active,
+            fqdn,
+            prod,
+            us,
+            resourcegroup
+        FROM resource
+        INNER JOIN service ON resource.name = service.resource_name
+        WHERE service.name = "Submit Node"
+        ;
 """
     )
 
