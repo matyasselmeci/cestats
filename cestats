@@ -46,6 +46,9 @@ select_into join/active-prod-us         "t.fqdn FROM topology AS t JOIN factory 
 select_into join/active-prod-nonus      "t.fqdn FROM topology AS t JOIN factory AS f USING(fqdn) WHERE t.active=1 AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.us=0     ORDER BY t.fqdn"
 select_into join/active-prod-hosted     "t.fqdn FROM topology AS t JOIN factory AS f USING(fqdn) WHERE t.active=1 AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.hosted=1 ORDER BY t.fqdn"
 
+joined_not_factory_constraint="(SELECT COUNT(*) FROM factory WHERE fqdn=fqdn_topology AND enabled=active_topology AND prod=prod_topology)=0"
+joined_not_topo_constraint="(SELECT COUNT(*) FROM topology WHERE fqdn=fqdn_factory AND active=active_factory AND prod=prod_factory)=0"
+
 select_into topo-not-fact/active-prod-us   "
 	fqdn_topology
 	FROM joined
