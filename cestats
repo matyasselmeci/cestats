@@ -38,6 +38,10 @@ select_into fact/active-prod-us     "fqdn FROM factory WHERE enabled=1 AND prod=
 select_into fact/active-prod-nonus  "fqdn FROM factory WHERE enabled=1 AND prod=1 AND us=0     ORDER BY fqdn"
 select_into fact/active-prod-hosted "fqdn FROM factory WHERE enabled=1 AND prod=1 AND hosted=1 ORDER BY fqdn"
 
+select_into topo/active-prod-us-facility     "r.facility FROM topology AS t JOIN resourcegroup AS r WHERE t.resourcegroup = r.name AND t.active=1 AND t.prod=1 AND t.us=1     ORDER BY r.facility"
+select_into topo/active-prod-nonus-facility  "r.facility FROM topology AS t JOIN resourcegroup AS r WHERE t.resourcegroup = r.name AND t.active=1 AND t.prod=1 AND t.us=0     ORDER BY r.facility"
+select_into topo/active-prod-hosted-facility "r.facility FROM topology AS t JOIN resourcegroup AS r WHERE t.resourcegroup = r.name AND t.active=1 AND t.prod=1 AND t.hosted=1 ORDER BY r.facility"
+
 select_into join/active-prod-us         "t.fqdn FROM topology AS t JOIN factory AS f USING(fqdn) WHERE t.active=1 AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.us=1     ORDER BY t.fqdn"
 select_into join/active-prod-nonus      "t.fqdn FROM topology AS t JOIN factory AS f USING(fqdn) WHERE t.active=1 AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.us=0     ORDER BY t.fqdn"
 select_into join/active-prod-hosted     "t.fqdn FROM topology AS t JOIN factory AS f USING(fqdn) WHERE t.active=1 AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.hosted=1 ORDER BY t.fqdn"
