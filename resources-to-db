@@ -34,8 +34,8 @@ def get_tree(params):
     )
 
 
-def get_resources_with_fqdns_and_services(tree):
-    resources = tree.findall("./ResourceGroup/Resources/Resource")
+def get_resources_with_fqdns_and_services(resourcegroup):
+    resources = resourcegroup.findall("./Resources/Resource")
     return [
         (res, res.find("./FQDN").text.strip(), res.findall("./Services/Service"))
         for res in resources
@@ -50,6 +50,13 @@ def main():
 
     db.executescript(
         """
+        DROP TABLE IF EXISTS resourcegroup;
+
+        CREATE TABLE resourcegroup(
+            name TEXT PRIMARY KEY,
+            facility TEXT
+        );
+
         DROP TABLE IF EXISTS resource;
 
         CREATE TABLE resource(
@@ -58,7 +65,10 @@ def main():
             fqdn TEXT,
             hosted INTEGER,
             prod INTEGER,
-            us INTEGER
+            us INTEGER,
+            resourcegroup TEXT,
+            FOREIGN KEY (resourcegroup)
+              REFERENCES resourcegroup (name)
         );
 
         DROP TABLE IF EXISTS service;
@@ -81,7 +91,8 @@ def main():
             fqdn,
             hosted,
             prod,
-            us
+            us,
+            resourcegroup
         FROM resource
         INNER JOIN service ON resource.name = service.resource_name
         WHERE service.name = "CE"
@@ -96,22 +107,34 @@ def main():
 
     cur = db.cursor()
     for tree, prod in [(prod_tree, True), (itb_tree, False)]:
-        for res, fqdn, services in get_resources_with_fqdns_and_services(tree):
-            name = res.find("./Name").text.strip()
-            active = strtobool(res.find("./Active").text.strip())
-            hosted = is_hosted_fqdn(fqdn)
-            us = is_us_fqdn(fqdn)
+        for resourcegroup in tree.findall("./ResourceGroup"):
+            resourcegroup_name = resourcegroup.find("./GroupName").text.strip()
+            facility = resourcegroup.find("./Facility/Name").text.strip()
+
+            resources = get_resources_with_fqdns_and_services(resourcegroup)
+            if not resources:
+                continue
             cur.execute(
-                "INSERT INTO resource (name, active, fqdn, hosted, prod, us) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (name, active, fqdn, hosted, prod, us),
+                "INSERT INTO resourcegroup (name, facility) " "VALUES (?, ?)",
+                (resourcegroup_name, facility),
             )
-            for svc in services:
-                svc_name = svc.find("./Name").text.strip()
+
+            for res, fqdn, services in resources:
+                name = res.find("./Name").text.strip()
+                active = strtobool(res.find("./Active").text.strip())
+                hosted = is_hosted_fqdn(fqdn)
+                us = is_us_fqdn(fqdn)
                 cur.execute(
-                    "INSERT INTO service (name, resource_name) " "VALUES (?, ?)",
-                    (svc_name, name),
+                    "INSERT INTO resource (name, active, fqdn, hosted, prod, us, resourcegroup) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (name, active, fqdn, hosted, prod, us, resourcegroup_name),
                 )
+                for svc in services:
+                    svc_name = svc.find("./Name").text.strip()
+                    cur.execute(
+                        "INSERT INTO service (name, resource_name) " "VALUES (?, ?)",
+                        (svc_name, name),
+                    )
 
     db.commit()
 
