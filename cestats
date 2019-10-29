@@ -118,62 +118,6 @@ select_into joined_prod -header "* FROM joined_prod ORDER BY fqdn"
 select_into joined_prod_osgvo -header "* FROM joined_prod WHERE vos LIKE '%\"OSGVO\"%' ORDER BY fqdn"
 
 
-### UNUSED:
-#mkdir -p $topdir/{topo-undef-fact,fact-undef-topo}
-#
-#select_into topo-undef-fact/active-prod-us   "
-#	fqdn_topology
-#	FROM joined
-#	WHERE fqdn_factory IS NULL
-#	AND active_topology=1
-#	AND prod_topology=1
-#	AND us=1
-#	ORDER BY fqdn_topology"
-#
-#select_into topo-undef-fact/active-prod-nonus "
-#	fqdn_topology
-#	FROM joined
-#	WHERE fqdn_factory IS NULL
-#	AND active_topology=1
-#	AND prod_topology=1
-#	AND us=0
-#	ORDER BY fqdn_topology"
-#
-#select_into topo-undef-fact/active-prod-hosted "
-#	fqdn_topology
-#	FROM joined
-#	WHERE fqdn_factory IS NULL
-#	AND active_topology=1
-#	AND prod_topology=1
-#	AND hosted_ce=1
-#	ORDER BY fqdn_topology"
-#
-#select_into fact-undef-topo/active-prod-us    "
-#	fqdn_factory
-#	FROM joined
-#	WHERE fqdn_topology IS NULL
-#	AND active_factory=1
-#	AND prod_factory=1
-#	AND us=1
-#	ORDER BY fqdn_factory"
-#
-#select_into fact-undef-topo/active-prod-nonus "
-#	fqdn_factory
-#	FROM joined
-#	WHERE fqdn_topology IS NULL
-#	AND active_factory=1
-#	AND prod_factory=1
-#	AND us=0
-#	ORDER BY fqdn_factory"
-#
-#select_into fact-undef-topo/active-prod-hosted "
-#	fqdn_factory
-#	FROM joined
-#	WHERE fqdn_topology IS NULL
-#	AND active_factory=1
-#	AND prod_factory=1
-#	AND hosted_ce=1
-#	ORDER BY fqdn_factory"
 
 echo "results in $topdir/"
 find $topdir/fqdns -type f -name \*.tab | sort | xargs wc -l
