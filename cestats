@@ -60,11 +60,7 @@ select_into fqdns/topo-not-fact/active-prod-us   "
 	WHERE active_topology=1
 	AND prod_topology=1
 	AND us=1
-	AND (SELECT COUNT(*)
-	     FROM factory
-	     WHERE fqdn=fqdn_topology
-	     AND enabled=active_topology
-	     AND prod=prod_topology)=0
+	AND $joined_not_factory_constraint
 	ORDER BY fqdn_topology"
 
 select_into fqdns/topo-not-fact/active-prod-nonus "
@@ -73,11 +69,7 @@ select_into fqdns/topo-not-fact/active-prod-nonus "
 	WHERE active_topology=1
 	AND prod_topology=1
 	AND us=0
-	AND (SELECT COUNT(*)
-	     FROM factory
-	     WHERE fqdn=fqdn_topology
-	     AND enabled=active_topology
-	     AND prod=prod_topology)=0
+	AND $joined_not_factory_constraint
 	ORDER BY fqdn_topology"
 
 select_into fqdns/topo-not-fact/active-prod-hosted "
@@ -86,11 +78,7 @@ select_into fqdns/topo-not-fact/active-prod-hosted "
 	WHERE active_topology=1
 	AND prod_topology=1
 	AND hosted_ce=1
-	AND (SELECT COUNT(*)
-	     FROM factory
-	     WHERE fqdn=fqdn_topology
-	     AND enabled=active_topology
-	     AND prod=prod_topology)=0
+	AND $joined_not_factory_constraint
 	ORDER BY fqdn_topology"
 
 select_into fqdns/fact-not-topo/active-prod-us   "
@@ -99,11 +87,7 @@ select_into fqdns/fact-not-topo/active-prod-us   "
 	WHERE active_factory=1
 	AND prod_factory=1
 	AND us=1
-	AND (SELECT COUNT(*)
-	     FROM topology
-	     WHERE fqdn=fqdn_factory
-	     AND active=active_factory
-	     AND prod=prod_factory)=0
+	AND $joined_not_topo_constraint
 	ORDER BY fqdn_factory"
 
 select_into fqdns/fact-not-topo/active-prod-nonus "
@@ -112,11 +96,7 @@ select_into fqdns/fact-not-topo/active-prod-nonus "
 	WHERE active_factory=1
 	AND prod_factory=1
 	AND us=0
-	AND (SELECT COUNT(*)
-	     FROM topology
-	     WHERE fqdn=fqdn_factory
-	     AND active=active_factory
-	     AND prod=prod_factory)=0
+	AND $joined_not_topo_constraint
 	ORDER BY fqdn_factory"
 
 select_into fqdns/fact-not-topo/active-prod-hosted "
@@ -125,14 +105,11 @@ select_into fqdns/fact-not-topo/active-prod-hosted "
 	WHERE active_factory=1
 	AND prod_factory=1
 	AND hosted_ce=1
-	AND (SELECT COUNT(*)
-	     FROM topology
-	     WHERE fqdn=fqdn_factory
-	     AND active=active_factory
-	     AND prod=prod_factory)=0
+	AND $joined_not_topo_constraint
 	ORDER BY fqdn_factory"
 
 select_into joined -header "* FROM joined ORDER BY fqdn_topology, fqdn_factory"
+select_into joined_prod -header "* FROM joined_prod ORDER BY fqdn_topology, fqdn_factory"
 
 
 ### UNUSED:
