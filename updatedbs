@@ -55,7 +55,7 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 	WHERE topology.fqdn IS NULL
 	;
 
-	CREATE VIEW joined_prod AS
+	CREATE VIEW joined_prod_facility AS
 	SELECT
 		fqdn_topology,
 		fqdn_factory,
@@ -67,10 +67,12 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 		active_factory,
 		us,
 		hosted_ce,
-		resource_group
+		r.facility AS facility
 	FROM joined
+	JOIN resourcegroup AS r
 	WHERE prod_topology=1
 	AND prod_factory=1
+	AND resource_group=r.name
 	;
 	__END__
 
