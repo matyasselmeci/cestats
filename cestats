@@ -39,17 +39,17 @@ select_into fqdns/fact/active-prod-us     "fqdn FROM factory WHERE enabled=1 AND
 select_into fqdns/fact/active-prod-nonus  "fqdn FROM factory WHERE enabled=1 AND prod=1 AND us=0     ORDER BY fqdn"
 select_into fqdns/fact/active-prod-hosted "fqdn FROM factory WHERE enabled=1 AND prod=1 AND hosted=1 ORDER BY fqdn"
 
-select_into facilities/topo/active-prod-us     "r.facility FROM topology AS t JOIN resourcegroup AS r WHERE t.resourcegroup = r.name AND t.active=1 AND t.prod=1 AND t.us=1     ORDER BY r.facility"
-select_into facilities/topo/active-prod-nonus  "r.facility FROM topology AS t JOIN resourcegroup AS r WHERE t.resourcegroup = r.name AND t.active=1 AND t.prod=1 AND t.us=0     ORDER BY r.facility"
-select_into facilities/topo/active-prod-hosted "r.facility FROM topology AS t JOIN resourcegroup AS r WHERE t.resourcegroup = r.name AND t.active=1 AND t.prod=1 AND t.hosted=1 ORDER BY r.facility"
+select_into facilities/topo/active-prod-us     "r.facility FROM topology AS t JOIN resourcegroup AS r ON t.resourcegroup = r.name WHERE t.active=1 AND t.prod=1 AND t.us=1     ORDER BY r.facility"
+select_into facilities/topo/active-prod-nonus  "r.facility FROM topology AS t JOIN resourcegroup AS r ON t.resourcegroup = r.name WHERE t.active=1 AND t.prod=1 AND t.us=0     ORDER BY r.facility"
+select_into facilities/topo/active-prod-hosted "r.facility FROM topology AS t JOIN resourcegroup AS r ON t.resourcegroup = r.name WHERE t.active=1 AND t.prod=1 AND t.hosted=1 ORDER BY r.facility"
 
 select_into fqdns/join/active-prod-us         "t.fqdn FROM topology AS t JOIN factory AS f USING(fqdn) WHERE t.active=1 AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.us=1     ORDER BY t.fqdn"
 select_into fqdns/join/active-prod-nonus      "t.fqdn FROM topology AS t JOIN factory AS f USING(fqdn) WHERE t.active=1 AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.us=0     ORDER BY t.fqdn"
 select_into fqdns/join/active-prod-hosted     "t.fqdn FROM topology AS t JOIN factory AS f USING(fqdn) WHERE t.active=1 AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.hosted=1 ORDER BY t.fqdn"
 
-select_into facilities/join/enabled-prod-us-facility     "r.facility FROM topology AS t JOIN resourcegroup AS r JOIN factory AS f USING(fqdn) WHERE t.resourcegroup = r.name AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.us=1     ORDER BY r.facility"
-select_into facilities/join/enabled-prod-nonus-facility  "r.facility FROM topology AS t JOIN resourcegroup AS r JOIN factory AS f USING(fqdn) WHERE t.resourcegroup = r.name AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.us=0     ORDER BY r.facility"
-select_into facilities/join/enabled-prod-hosted-facility "r.facility FROM topology AS t JOIN resourcegroup AS r JOIN factory AS f USING(fqdn) WHERE t.resourcegroup = r.name AND f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.hosted=1 ORDER BY r.facility"
+select_into facilities/join/enabled-prod-us-facility     "r.facility FROM topology AS t JOIN resourcegroup AS r ON t.resourcegroup = r.name JOIN factory AS f USING(fqdn) WHERE f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.us=1     ORDER BY r.facility"
+select_into facilities/join/enabled-prod-nonus-facility  "r.facility FROM topology AS t JOIN resourcegroup AS r ON t.resourcegroup = r.name JOIN factory AS f USING(fqdn) WHERE f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.us=0     ORDER BY r.facility"
+select_into facilities/join/enabled-prod-hosted-facility "r.facility FROM topology AS t JOIN resourcegroup AS r ON t.resourcegroup = r.name JOIN factory AS f USING(fqdn) WHERE f.enabled=1 AND t.prod=1 AND f.prod=1 AND t.hosted=1 ORDER BY r.facility"
 
 joined_not_factory_constraint="(SELECT COUNT(*) FROM factory WHERE fqdn=fqdn_topology AND enabled=active_topology AND prod=prod_topology)=0"
 joined_not_topo_constraint="(SELECT COUNT(*) FROM topology WHERE fqdn=fqdn_factory AND active=active_factory AND prod=prod_factory)=0"
