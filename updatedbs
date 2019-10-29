@@ -20,8 +20,7 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 
 	CREATE VIEW joined AS
 	SELECT
-		topology.fqdn AS fqdn_topology,
-		factory.fqdn AS fqdn_factory,
+		topology.fqdn AS fqdn,
 		topology.name AS resource_name,
 		factory.name AS factory_entry,
 		factory.gridtype AS ce_type,
@@ -38,8 +37,7 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 	LEFT JOIN factory USING(fqdn)
 	UNION ALL
 	SELECT
-		topology.fqdn AS fqdn_topology,
-		factory.fqdn AS fqdn_factory,
+		factory.fqdn AS fqdn,
 		topology.name AS resource_name,
 		factory.name AS factory_entry,
 		factory.gridtype AS ce_type,
@@ -58,8 +56,7 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 
 	CREATE VIEW joined_prod AS
 	SELECT
-		fqdn_topology,
-		fqdn_factory,
+		fqdn,
 		resource_name,
 		factory_entry,
 		ce_type,
