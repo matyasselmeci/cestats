@@ -113,9 +113,9 @@ select_into fqdns/fact-not-topo/active-prod-hosted "
 	ORDER BY fqdn"
 
 select_into joined -header "* FROM joined ORDER BY fqdn"
-select_into joined_osgvo -header "* FROM joined WHERE vos LIKE \"%'OSGVO'%\" ORDER BY fqdn"
+select_into joined_osgvo -header "* FROM joined WHERE vos LIKE \"%'OSGVO%\" ORDER BY fqdn"
 select_into joined_prod -header "* FROM joined_prod ORDER BY fqdn"
-select_into joined_prod_osgvo -header "* FROM joined_prod WHERE vos LIKE \"%'OSGVO'%\" ORDER BY fqdn"
+select_into joined_prod_osgvo -header "* FROM joined_prod WHERE vos LIKE \"%'OSGVO%\" ORDER BY fqdn"
 
 
 
