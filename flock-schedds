@@ -1,0 +1,42 @@
+#!/bin/bash
+
+cd "$(dirname "$0")"
+
+set -e
+# flock.opensciencegrid.org might be firewalled so for this one use existing data if it exists
+if [[ ! -e flock_schedds.tab ]]; then
+	condor_status -schedd -pool flock.opensciencegrid.org -af:t name > .flock_schedds.tab.new
+	sort .flock_schedds.tab.new > flock_schedds.tab
+	rm -f .flock_schedds.tab.new
+else
+	echo "flock_schedds.tab exists - not fetching new data"
+fi
+
+sqlite3 flock_schedds.sqlite "
+	DROP TABLE IF EXISTS schedd;
+	CREATE TABLE schedd(name TEXT PRIMARY KEY, fqdn TEXT);
+"
+
+IFS=$'\t'
+while read name; do
+	fqdn=`tr A-Z a-z <<<$name`
+	fqdn=${fqdn#*@}
+	# yeah sql injection blah blah blah
+	sqlite3 flock_schedds.sqlite "INSERT INTO schedd (name, fqdn) VALUES ('$name', '$fqdn');"
+done < flock_schedds.tab
+
+mkdir -p stats
+sqlite3 -bail -separator $'\t' -header flock_schedds.sqlite <<-"__END__"
+	ATTACH DATABASE "resources.sqlite" AS res;
+	.output stats/.flock_schedds.tab.new
+	SELECT DISTINCT s.name, s.fqdn, r.name AS resource, rg.facility
+		FROM schedd AS s
+		LEFT OUTER JOIN res.resource AS r USING (fqdn)
+		LEFT OUTER JOIN res.resourcegroup AS rg ON r.resourcegroup=rg.name
+		ORDER BY rg.facility, s.name
+	;
+__END__
+mv -f stats/.flock_schedds.tab.new stats/flock_schedds.tab
+rm -f flock_schedds.sqlite
+
+# vim:noet:sw=8:sts=8:ts=8
