@@ -29,7 +29,7 @@ mkdir -p stats
 sqlite3 -bail -separator $'\t' -header flock_schedds.sqlite <<-"__END__"
 	ATTACH DATABASE "resources.sqlite" AS res;
 	.output stats/.flock_schedds.tab.new
-	SELECT DISTINCT s.name, s.fqdn, r.name AS resource, rg.facility
+	SELECT DISTINCT s.name AS schedd_name, s.fqdn, r.name AS resource, rg.facility AS institution
 		FROM schedd AS s
 		LEFT OUTER JOIN res.resource AS r USING (fqdn)
 		LEFT OUTER JOIN res.resourcegroup AS rg ON r.resourcegroup=rg.name
