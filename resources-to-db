@@ -138,6 +138,7 @@ def main():
             for res, fqdn, services in resources:
                 name = res.find("./Name").text.strip()
                 active = strtobool(res.find("./Active").text.strip())
+                fqdn = fqdn.lower()
                 hosted = is_hosted_fqdn(fqdn)
                 us = is_us_fqdn(fqdn)
                 cur.execute(

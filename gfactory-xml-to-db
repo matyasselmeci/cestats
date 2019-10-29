@@ -36,9 +36,9 @@ def get_attribs(entry):
     us = is_us_fqdn(fqdn)
     hosted = is_hosted_fqdn(fqdn)
     vos = vos_from_entry(entry)
-    vos = ",".join('"%s"' % vo.strip() for vo in sorted(vos))
+    vos = ",".join("'%s'" % vo.strip() for vo in sorted(vos))
     return Attribs(
-        fqdn,
+        fqdn.lower(),
         us,
         gridtype,
         gk,
