@@ -15,11 +15,18 @@ from distutils.util import strtobool
 US_TLDS = {"net", "gov", "edu", "org", "com"}
 
 
-Attribs = namedtuple("Attribs", "fqdn us gridtype gatekeeper name enabled hosted")
+Attribs = namedtuple("Attribs", "fqdn us gridtype gatekeeper name enabled hosted vos")
 
 
 def entries_from_tree(tree):
     return tree.findall("./entries/entry[@name][@enabled][@gatekeeper][@gridtype]")
+
+
+def vos_from_entry(entry):
+    vos = set()
+    for elem in entry.findall("./attrs/attr[@name='GLIDEIN_Supported_VOs'][@value]"):
+        vos = vos.union(elem.attrib["value"].strip().split(","))
+    return vos
 
 
 def get_attribs(entry):
@@ -28,6 +35,8 @@ def get_attribs(entry):
     fqdn = fqdn_from_gatekeeper_and_gridtype(gk, gridtype)
     us = is_us_fqdn(fqdn)
     hosted = is_hosted_fqdn(fqdn)
+    vos = vos_from_entry(entry)
+    vos = ",".join('"%s"' % vo.strip() for vo in sorted(vos))
     return Attribs(
         fqdn,
         us,
@@ -36,6 +45,7 @@ def get_attribs(entry):
         entry.get("name"),
         strtobool(entry.get("enabled")),
         hosted,
+        vos,
     )
 
 
@@ -85,8 +95,8 @@ def xml_to_table(db, fname, prod):
     for ent in entries_from_tree(tree):
         attribs = get_attribs(ent)
         cur.execute(
-            "INSERT INTO entry (name, enabled, gatekeeper, gridtype, fqdn, prod, us, hosted) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO entry (name, enabled, gatekeeper, gridtype, fqdn, prod, us, hosted, vos) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 attribs.name,
                 attribs.enabled,
@@ -96,6 +106,7 @@ def xml_to_table(db, fname, prod):
                 prod,
                 attribs.us,
                 attribs.hosted,
+                attribs.vos,
             ),
         )
 
@@ -119,7 +130,8 @@ def main():
             fqdn TEXT,
             prod INTEGER,
             us INTEGER,
-            hosted INTEGER
+            hosted INTEGER,
+            vos TEXT
         );
 """
         # note: I can't use name as a PRIMARY KEY because a name might have multiple entries (some enabled, some disabled)
@@ -136,9 +148,7 @@ def main():
 
     for fname in fnames:
         xml_to_table(
-            db,
-            fname,
-            prod=not bool(re.search(r"\bitb\b", os.path.basename(fname))),
+            db, fname, prod=not bool(re.search(r"\bitb\b", os.path.basename(fname)))
         )
 
 

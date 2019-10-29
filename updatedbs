@@ -31,7 +31,8 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 		factory.prod AS prod_factory,
 		topology.us AS us,
 		topology.hosted AS hosted_ce,
-		r.facility AS facility
+		r.facility AS facility,
+		factory.vos AS vos
 	FROM topology
 	LEFT JOIN resourcegroup AS r ON topology.resourcegroup=r.name
 	LEFT JOIN factory USING(fqdn)
@@ -48,7 +49,8 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 		factory.prod AS prod_factory,
 		factory.us AS us,
 		factory.hosted AS hosted_ce,
-		NULL AS facility
+		NULL AS facility,
+		factory.vos AS vos
 	FROM factory
 	LEFT JOIN topology USING(fqdn)
 	WHERE topology.fqdn IS NULL
@@ -65,7 +67,8 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 		active_factory,
 		us,
 		hosted_ce,
-		facility
+		facility,
+		vos
 	FROM joined
 	WHERE (prod_topology IS NULL OR prod_topology=1)
 	AND (prod_factory IS NULL OR prod_factory=1)
