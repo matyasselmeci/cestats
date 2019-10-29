@@ -32,8 +32,9 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 		factory.prod AS prod_factory,
 		topology.us AS us,
 		topology.hosted AS hosted_ce,
-		topology.resourcegroup AS resource_group
+		r.facility AS facility
 	FROM topology
+	LEFT JOIN resourcegroup AS r ON topology.resourcegroup=r.name
 	LEFT JOIN factory USING(fqdn)
 	UNION ALL
 	SELECT
@@ -49,13 +50,13 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 		factory.prod AS prod_factory,
 		factory.us AS us,
 		factory.hosted AS hosted_ce,
-		topology.resourcegroup AS resource_group
+		NULL AS facility
 	FROM factory
 	LEFT JOIN topology USING(fqdn)
 	WHERE topology.fqdn IS NULL
 	;
 
-	CREATE VIEW joined_prod_facility AS
+	CREATE VIEW joined_prod AS
 	SELECT
 		fqdn_topology,
 		fqdn_factory,
@@ -67,12 +68,10 @@ sqlite3 -bail ces.sqlite <<-"__END__"
 		active_factory,
 		us,
 		hosted_ce,
-		r.facility AS facility
+		facility
 	FROM joined
-	JOIN resourcegroup AS r
-	WHERE prod_topology=1
-	AND prod_factory=1
-	AND resource_group=r.name
+	WHERE (prod_topology IS NULL OR prod_topology=1)
+	AND (prod_factory IS NULL OR prod_factory=1)
 	;
 	__END__
 
