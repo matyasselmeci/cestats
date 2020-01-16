@@ -3,6 +3,7 @@
 
 import os
 import sqlite3
+import sys
 import xml.etree.ElementTree as ET
 from distutils.util import strtobool
 
@@ -43,8 +44,11 @@ def get_resources_with_fqdns_and_services(resourcegroup):
     ]
 
 
-def main():
-    dbname = "resources.sqlite"
+def main(argv):
+    try:
+        dbname = argv[1]
+    except IndexError:
+        dbname = "resources.sqlite"
 
     db = sqlite3.connect(dbname)
 
@@ -156,4 +160,4 @@ def main():
     db.commit()
 
 
-main()
+main(sys.argv)

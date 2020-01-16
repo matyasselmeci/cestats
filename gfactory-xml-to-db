@@ -113,8 +113,11 @@ def xml_to_table(db, fname, prod):
     db.commit()
 
 
-def main():
-    dbname = "gfactory.sqlite"
+def main(argv):
+    try:
+        dbname = argv[2]
+    except IndexError:
+        dbname = "gfactory.sqlite"
 
     db = sqlite3.connect(dbname)
 
@@ -152,4 +155,4 @@ def main():
         )
 
 
-main()
+main(sys.argv)

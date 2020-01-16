@@ -1,0 +1,71 @@
+#!/bin/bash
+
+destfile=${1:-ces.sqlite}
+
+rm -f "$destfile.new"
+sqlite3 -bail "$destfile.new" <<-"__END__"
+	ATTACH DATABASE "gfactory.sqlite" AS gf;
+	CREATE TABLE factory AS SELECT * FROM gf.entry;
+	ATTACH DATABASE "resources.sqlite" AS res;
+	CREATE TABLE topology AS SELECT * FROM res.ce;
+	CREATE TABLE resourcegroup AS SELECT * FROM res.resourcegroup;
+
+	CREATE VIEW joined AS
+	SELECT
+		topology.fqdn AS fqdn,
+		topology.name AS resource_name,
+		factory.name AS factory_entry,
+		factory.gridtype AS ce_type,
+		factory.gatekeeper AS contact_string,
+		topology.active AS active_topology,
+		factory.enabled AS active_factory,
+		topology.prod AS prod_topology,
+		factory.prod AS prod_factory,
+		topology.us AS us,
+		topology.hosted AS hosted_ce,
+		r.facility AS facility,
+		factory.vos AS vos
+	FROM topology
+	LEFT JOIN resourcegroup AS r ON topology.resourcegroup=r.name
+	LEFT JOIN factory USING(fqdn)
+	UNION ALL
+	SELECT
+		factory.fqdn AS fqdn,
+		topology.name AS resource_name,
+		factory.name AS factory_entry,
+		factory.gridtype AS ce_type,
+		factory.gatekeeper AS contact_string,
+		topology.active AS active_topology,
+		factory.enabled AS active_factory,
+		topology.prod AS prod_topology,
+		factory.prod AS prod_factory,
+		factory.us AS us,
+		factory.hosted AS hosted_ce,
+		NULL AS facility,
+		factory.vos AS vos
+	FROM factory
+	LEFT JOIN topology USING(fqdn)
+	WHERE topology.fqdn IS NULL
+	;
+
+	CREATE VIEW joined_prod AS
+	SELECT
+		fqdn,
+		resource_name,
+		factory_entry,
+		ce_type,
+		contact_string,
+		active_topology,
+		active_factory,
+		us,
+		hosted_ce,
+		facility,
+		vos
+	FROM joined
+	WHERE (prod_topology IS NULL OR prod_topology=1)
+	AND (prod_factory IS NULL OR prod_factory=1)
+	;
+	__END__
+mv -f "$destfile.new" "$destfile"
+
+# vim:noet:sw=8:sts=8:ts=8

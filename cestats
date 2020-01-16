@@ -1,7 +1,7 @@
 #!/bin/bash
 
-topdir=stats
-db=ces.sqlite
+db=${1:-ces.sqlite}
+topdir=${2:-stats}
 
 set -eu
 
@@ -17,20 +17,21 @@ select_into() {
 		shift
 	fi
 	sqlite3 -bail -separator $'\t' $header \
-		$db \
+		"$db" \
 		"SELECT DISTINCT $*;" \
-		> $topdir/"$outfile.tab"
+		> "$topdir/$outfile.tab"
 }
 
 
 if [[ ! -f $db ]]; then
-	./updatedbs
+	echo "$db missing"
+	exit 1
 fi
 
 
-mkdir -p $topdir/fqdns/{topo,fact,join,topo-not-fact,fact-not-topo}
-mkdir -p $topdir/facilities/{topo,join}
-find $topdir/ -type f -name \*.tab -exec rm -f {} +
+mkdir -p "$topdir/fqdns/{topo,fact,join,topo-not-fact,fact-not-topo}"
+mkdir -p "$topdir/facilities/{topo,join}"
+find "$topdir/" -type f -name \*.tab -exec rm -f {} +
 
 select_into fqdns/topo/active-prod-us     "fqdn FROM topology WHERE active=1 AND prod=1 AND us=1     ORDER BY fqdn"
 select_into fqdns/topo/active-prod-nonus  "fqdn FROM topology WHERE active=1 AND prod=1 AND us=0     ORDER BY fqdn"
@@ -120,7 +121,7 @@ select_into joined_prod_osgvo -header "* FROM joined_prod WHERE vos LIKE \"%'OSG
 
 
 echo "results in $topdir/"
-find $topdir/fqdns -type f -name \*.tab | sort | xargs wc -l
-find $topdir/facilities -type f -name \*.tab | sort | xargs wc -l
+find "$topdir/fqdns" -type f -name \*.tab | sort | xargs wc -l
+find "$topdir/facilities" -type f -name \*.tab | sort | xargs wc -l
 
 # vim:noet:sw=8:sts=8:ts=8
