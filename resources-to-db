@@ -71,6 +71,7 @@ def main(argv):
             prod INTEGER,
             us INTEGER,
             resourcegroup TEXT,
+            description TEXT,
             FOREIGN KEY (resourcegroup)
               REFERENCES resourcegroup (name)
         );
@@ -80,6 +81,7 @@ def main(argv):
         CREATE TABLE service(
             name TEXT,
             resource_name TEXT,
+            description TEXT,
             UNIQUE (name, resource_name),
             FOREIGN KEY (resource_name)
               REFERENCES resource (name)
@@ -117,6 +119,21 @@ def main(argv):
         INNER JOIN service ON resource.name = service.resource_name
         WHERE service.name = "Submit Node"
         ;
+
+        DROP VIEW IF EXISTS gridftp;
+
+        CREATE VIEW gridftp
+        AS
+        SELECT
+            resource.name,
+            active,
+            fqdn,
+            resourcegroup,
+            resource.description
+        FROM resource
+        INNER JOIN service ON resource.name = service.resource_name
+        WHERE service.name = "GridFtp"
+        ;
 """
     )
 
@@ -145,16 +162,18 @@ def main(argv):
                 fqdn = fqdn.lower()
                 hosted = is_hosted_fqdn(fqdn)
                 us = is_us_fqdn(fqdn)
+                description = res.find("./Description").text.strip()
                 cur.execute(
-                    "INSERT INTO resource (name, active, fqdn, hosted, prod, us, resourcegroup) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (name, active, fqdn, hosted, prod, us, resourcegroup_name),
+                    "INSERT INTO resource (name, active, fqdn, hosted, prod, us, resourcegroup, description) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (name, active, fqdn, hosted, prod, us, resourcegroup_name, description),
                 )
                 for svc in services:
                     svc_name = svc.find("./Name").text.strip()
+                    svc_description = svc.find("./Description").text.strip()
                     cur.execute(
-                        "INSERT INTO service (name, resource_name) " "VALUES (?, ?)",
-                        (svc_name, name),
+                        "INSERT INTO service (name, resource_name, description) " "VALUES (?, ?, ?)",
+                        (svc_name, name, svc_description),
                     )
 
     db.commit()

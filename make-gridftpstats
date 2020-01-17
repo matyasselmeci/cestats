@@ -1,0 +1,72 @@
+#!/bin/bash
+
+db=${1:-resources.sqlite}
+topdir=${2:-gridftpstats}
+
+set -eu
+
+cd "$(dirname "$0")"
+
+
+select_into() {
+	outfile=$1
+	shift
+	header=
+	if [[ $1 = -header ]]; then
+		header=-header
+		shift
+	fi
+	sqlite3 -bail -separator $'\t' $header \
+		"$db" \
+		"SELECT DISTINCT $*;" \
+		> "$topdir/$outfile.tab"
+}
+
+
+if [[ ! -f $db ]]; then
+	echo "$db missing"
+	exit 1
+fi
+
+
+mkdir -p "$topdir/active"
+find "$topdir/" -type f -name \*.tab -exec rm -f {} +
+
+
+select_into active/all -header "
+	fqdn, name, description
+	FROM gridftp
+	WHERE active=1;"
+
+select_into active/standalone -header "
+	fqdn, name, description
+	FROM gridftp AS g
+	WHERE active=1
+	AND (
+		SELECT COUNT(*)
+		FROM ce
+		WHERE g.name=ce.name
+	)=0
+	AND description NOT LIKE '%balance%'";
+
+select_into active/shared-with-ce -header "
+	fqdn, name, description
+	FROM gridftp AS g
+	WHERE active=1
+	AND (
+		SELECT COUNT(*)
+		FROM ce
+		WHERE g.name=ce.name
+	)>0
+	AND description NOT LIKE '%balance%'";
+
+select_into active/load-balanced -header "
+	fqdn, name, description
+	FROM gridftp AS g
+	WHERE active=1
+	AND description LIKE '%balance%'";
+
+
+echo "results in $topdir/"
+
+# vim:noet:sw=8:sts=8:ts=8

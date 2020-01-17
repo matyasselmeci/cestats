@@ -1,2 +1,3 @@
 *.sqlite
-stats/
+cestats/
+gridftpstats/

@@ -1,9 +1,12 @@
 .PHONY: all dbs
-all: stats
+all: cestats gridftpstats
 dbs: resources.sqlite gfactory.sqlite ces.sqlite
 
-stats: ces.sqlite cestats
-	./cestats $< $@
+cestats: ces.sqlite make-cestats
+	./make-cestats $< $@
+
+gridftpstats: resources.sqlite make-gridftpstats
+	./make-gridftpstats $< $@
 
 resources.sqlite: resources-to-db
 	./resources-to-db $@
