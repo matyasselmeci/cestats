@@ -72,6 +72,7 @@ def main(argv):
             us INTEGER,
             resourcegroup TEXT,
             description TEXT,
+            wlcg_accounting_name TEXT,
             FOREIGN KEY (resourcegroup)
               REFERENCES resourcegroup (name)
         );
@@ -163,10 +164,14 @@ def main(argv):
                 hosted = is_hosted_fqdn(fqdn)
                 us = is_us_fqdn(fqdn)
                 description = res.find("./Description").text.strip()
+                wlcg_accounting_name = None
+                wlcg_accounting_name_elem = res.find("./WLCGInformation/AccountingName")
+                if wlcg_accounting_name_elem is not None and wlcg_accounting_name_elem.text is not None:
+                    wlcg_accounting_name = wlcg_accounting_name_elem.text.strip()
                 cur.execute(
-                    "INSERT INTO resource (name, active, fqdn, hosted, prod, us, resourcegroup, description) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (name, active, fqdn, hosted, prod, us, resourcegroup_name, description),
+                    "INSERT INTO resource (name, active, fqdn, hosted, prod, us, wlcg_accounting_name, resourcegroup, description) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (name, active, fqdn, hosted, prod, us, wlcg_accounting_name, resourcegroup_name, description),
                 )
                 for svc in services:
                     svc_name = svc.find("./Name").text.strip()
