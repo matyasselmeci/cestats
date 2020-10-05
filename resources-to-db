@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 from distutils.util import strtobool
 
 US_TLDS = {"net", "gov", "edu", "org", "com"}
+WAYS_TO_SPELL_UNITED_STATES = {"united states", "us", "usa", "united states of america", "u.s.a", "puerto rico", "unites states"}
 
 
 def is_us_fqdn(fqdn):
@@ -58,7 +59,8 @@ def main(argv):
 
         CREATE TABLE resourcegroup(
             name TEXT PRIMARY KEY,
-            facility TEXT
+            facility TEXT,
+            country TEXT
         );
 
         DROP TABLE IF EXISTS resource;
@@ -178,13 +180,18 @@ def main(argv):
         for resourcegroup in tree.findall("./ResourceGroup"):
             resourcegroup_name = resourcegroup.find("./GroupName").text.strip()
             facility = resourcegroup.find("./Facility/Name").text.strip()
+            country = ""
+            try:
+                country = resourcegroup.find("./Site/Country").text.strip()
+            except AttributeError:
+                pass
 
             resources = get_resources_with_fqdns_and_services(resourcegroup)
             if not resources:
                 continue
             cur.execute(
-                "INSERT INTO resourcegroup (name, facility) " "VALUES (?, ?)",
-                (resourcegroup_name, facility),
+                "INSERT INTO resourcegroup (name, facility, country) " "VALUES (?, ?, ?)",
+                (resourcegroup_name, facility, country),
             )
 
             for res, fqdn, services in resources:
@@ -192,7 +199,7 @@ def main(argv):
                 active = strtobool(res.find("./Active").text.strip())
                 fqdn = fqdn.lower()
                 hosted = is_hosted_fqdn(fqdn)
-                us = is_us_fqdn(fqdn)
+                us = country.lower() in WAYS_TO_SPELL_UNITED_STATES if country else is_us_fqdn(fqdn)
                 description = res.find("./Description").text.strip()
                 wlcg_accounting_name = None
                 wlcg_accounting_name_elem = res.find("./WLCGInformation/AccountingName")
