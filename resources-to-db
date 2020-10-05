@@ -8,7 +8,15 @@ import xml.etree.ElementTree as ET
 from distutils.util import strtobool
 
 US_TLDS = {"net", "gov", "edu", "org", "com"}
-WAYS_TO_SPELL_UNITED_STATES = {"united states", "us", "usa", "united states of america", "u.s.a", "puerto rico", "unites states"}
+WAYS_TO_SPELL_UNITED_STATES = {
+    "united states",
+    "us",
+    "usa",
+    "united states of america",
+    "u.s.a",
+    "puerto rico",
+    "unites states",
+}
 
 
 def is_us_fqdn(fqdn):
@@ -190,7 +198,8 @@ def main(argv):
             if not resources:
                 continue
             cur.execute(
-                "INSERT INTO resourcegroup (name, facility, country) " "VALUES (?, ?, ?)",
+                "INSERT INTO resourcegroup (name, facility, country) "
+                "VALUES (?, ?, ?)",
                 (resourcegroup_name, facility, country),
             )
 
@@ -199,22 +208,40 @@ def main(argv):
                 active = strtobool(res.find("./Active").text.strip())
                 fqdn = fqdn.lower()
                 hosted = is_hosted_fqdn(fqdn)
-                us = country.lower() in WAYS_TO_SPELL_UNITED_STATES if country else is_us_fqdn(fqdn)
+                us = (
+                    country.lower() in WAYS_TO_SPELL_UNITED_STATES
+                    if country
+                    else is_us_fqdn(fqdn)
+                )
                 description = res.find("./Description").text.strip()
                 wlcg_accounting_name = None
                 wlcg_accounting_name_elem = res.find("./WLCGInformation/AccountingName")
-                if wlcg_accounting_name_elem is not None and wlcg_accounting_name_elem.text is not None:
+                if (
+                    wlcg_accounting_name_elem is not None
+                    and wlcg_accounting_name_elem.text is not None
+                ):
                     wlcg_accounting_name = wlcg_accounting_name_elem.text.strip()
                 cur.execute(
                     "INSERT INTO resource (name, active, fqdn, hosted, prod, us, wlcg_accounting_name, resourcegroup, description) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (name, active, fqdn, hosted, prod, us, wlcg_accounting_name, resourcegroup_name, description),
+                    (
+                        name,
+                        active,
+                        fqdn,
+                        hosted,
+                        prod,
+                        us,
+                        wlcg_accounting_name,
+                        resourcegroup_name,
+                        description,
+                    ),
                 )
                 for svc in services:
                     svc_name = svc.find("./Name").text.strip()
                     svc_description = svc.find("./Description").text.strip()
                     cur.execute(
-                        "INSERT INTO service (name, resource_name, description) " "VALUES (?, ?, ?)",
+                        "INSERT INTO service (name, resource_name, description) "
+                        "VALUES (?, ?, ?)",
                         (svc_name, name, svc_description),
                     )
 
