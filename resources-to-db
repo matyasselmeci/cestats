@@ -135,6 +135,36 @@ def main(argv):
         INNER JOIN service ON resource.name = service.resource_name
         WHERE service.name = "GridFtp"
         ;
+
+        DROP VIEW IF EXISTS xcache;
+
+        CREATE VIEW xcache
+        AS
+        SELECT
+            resource.name,
+            active,
+            fqdn,
+            resourcegroup,
+            resource.description
+        FROM resource
+        INNER JOIN service ON resource.name = service.resource_name
+        WHERE service.name = "XRootD cache server"
+        ;
+
+        DROP VIEW IF EXISTS xorigin;
+
+        CREATE VIEW xorigin
+        AS
+        SELECT
+            resource.name,
+            active,
+            fqdn,
+            resourcegroup,
+            resource.description
+        FROM resource
+        INNER JOIN service ON resource.name = service.resource_name
+        WHERE service.name = "XRootD origin server"
+        ;
 """
     )
 
