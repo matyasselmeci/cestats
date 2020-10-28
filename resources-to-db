@@ -31,9 +31,7 @@ def is_us_fqdn(fqdn):
 
 
 def is_hosted_fqdn(fqdn):
-    return (
-        fqdn.startswith("hosted-ce") or fqdn.startswith("pearc-ce")
-    ) and (
+    return (fqdn.startswith("hosted-ce") or fqdn.startswith("pearc-ce")) and (
         fqdn.endswith(".grid.uchicago.edu") or fqdn.startswith("opensciencegrid.org")
     )
 
