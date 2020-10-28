@@ -33,12 +33,12 @@ def get_attribs(entry):
     gk = entry.get("gatekeeper").strip()
     gridtype = entry.get("gridtype").strip()
     fqdn = fqdn_from_gatekeeper_and_gridtype(gk, gridtype)
-    us = is_us_fqdn(fqdn)
-    hosted = is_hosted_fqdn(fqdn)
+    us = is_us_fqdn(fqdn) if fqdn else False
+    hosted = is_hosted_fqdn(fqdn) if fqdn else False
     vos = vos_from_entry(entry)
     vos = ",".join("'%s'" % vo.strip() for vo in sorted(vos))
     return Attribs(
-        fqdn.lower(),
+        fqdn.lower() if fqdn else None,
         us,
         gridtype,
         gk,
