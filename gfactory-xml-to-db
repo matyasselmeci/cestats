@@ -50,9 +50,9 @@ def get_attribs(entry):
 
 
 def is_hosted_fqdn(fqdn):
-    return (
-        fqdn.startswith("hosted-ce") or fqdn.startswith("pearc-ce")
-    ) and fqdn.endswith(".grid.uchicago.edu")
+    return (fqdn.startswith("hosted-ce") or fqdn.startswith("pearc-ce")) and (
+        fqdn.endswith(".grid.uchicago.edu") or fqdn.startswith("opensciencegrid.org")
+    )
 
 
 def fqdn_from_gatekeeper_and_gridtype(gatekeeper, gridtype):
@@ -79,7 +79,7 @@ def is_us_fqdn(fqdn):
     # special cases
     if fqdn.endswith(".cancercomputer.com"):
         return False
-    if fqdn.endswith(".slateci.io"):
+    if fqdn.endswith(".slateci.io") or fqdn.endswith("chtc.io"):
         return True
 
     tld = fqdn.split(".")[-1]
