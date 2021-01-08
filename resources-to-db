@@ -53,6 +53,10 @@ def get_resources_with_fqdns_and_services(resourcegroup):
     ]
 
 
+def safe_elem_text(elem: ET.Element) -> str:
+    return elem.text.strip() if hasattr(elem, "text") else ""
+
+
 def main(argv):
     try:
         dbname = argv[1]
@@ -83,6 +87,7 @@ def main(argv):
             resourcegroup TEXT,
             description TEXT,
             wlcg_accounting_name TEXT,
+            tags TEXT,
             FOREIGN KEY (resourcegroup)
               REFERENCES resourcegroup (name)
         );
@@ -109,7 +114,8 @@ def main(argv):
             hosted,
             prod,
             us,
-            resourcegroup
+            resourcegroup,
+            tags
         FROM resource
         INNER JOIN service ON resource.name = service.resource_name
         WHERE service.name = "CE"
@@ -214,6 +220,9 @@ def main(argv):
                     else is_us_fqdn(fqdn)
                 )
                 description = res.find("./Description").text.strip()
+                tags = ",".join(
+                    sorted(safe_elem_text(e).upper() for e in res.findall("./Tags/Tag"))
+                )
                 wlcg_accounting_name = None
                 wlcg_accounting_name_elem = res.find("./WLCGInformation/AccountingName")
                 if (
@@ -222,8 +231,8 @@ def main(argv):
                 ):
                     wlcg_accounting_name = wlcg_accounting_name_elem.text.strip()
                 cur.execute(
-                    "INSERT INTO resource (name, active, fqdn, hosted, prod, us, wlcg_accounting_name, resourcegroup, description) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO resource (name, active, fqdn, hosted, prod, us, wlcg_accounting_name, resourcegroup, description, tags) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         name,
                         active,
@@ -234,6 +243,7 @@ def main(argv):
                         wlcg_accounting_name,
                         resourcegroup_name,
                         description,
+                        tags,
                     ),
                 )
                 for svc in services:
