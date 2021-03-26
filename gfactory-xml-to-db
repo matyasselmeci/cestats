@@ -51,7 +51,7 @@ def get_attribs(entry):
 
 def is_hosted_fqdn(fqdn):
     return (fqdn.startswith("hosted-ce") or fqdn.startswith("pearc-ce")) and (
-        fqdn.endswith(".grid.uchicago.edu") or fqdn.startswith("opensciencegrid.org")
+        fqdn.endswith(".grid.uchicago.edu") or fqdn.endswith("opensciencegrid.org")
     )
 
 
