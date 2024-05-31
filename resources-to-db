@@ -4,6 +4,7 @@
 import os
 import sqlite3
 import sys
+import typing as t
 import xml.etree.ElementTree as ET
 from distutils.util import strtobool
 
@@ -57,6 +58,29 @@ def safe_elem_text(elem: ET.Element) -> str:
     return elem.text.strip() if hasattr(elem, "text") else ""
 
 
+def add_service_view(db, view_name: str, service_name: str, extra_columns: t.List[str] = None):
+    service_columns = [
+        "resource.name",
+        "active",
+        "fqdn",
+        "resourcegroup",
+        "resource.description",
+    ] + (extra_columns or [])
+
+    script = f"""
+DROP VIEW IF EXISTS {view_name};
+CREATE VIEW {view_name}
+AS
+SELECT
+""" + ",\n".join(service_columns) + f"""
+FROM resource
+INNER JOIN service ON resource.name = service.resource_name
+WHERE service.name = "{service_name}"
+;
+"""
+    return db.executescript(script)
+
+
 def main(argv):
     try:
         dbname = argv[1]
@@ -102,87 +126,14 @@ def main(argv):
             FOREIGN KEY (resource_name)
               REFERENCES resource (name)
         );
-
-        DROP VIEW IF EXISTS ce;
-
-        CREATE VIEW ce
-        AS
-        SELECT
-            resource.name,
-            active,
-            fqdn,
-            hosted,
-            prod,
-            us,
-            resourcegroup,
-            tags
-        FROM resource
-        INNER JOIN service ON resource.name = service.resource_name
-        WHERE service.name = "CE"
-        ;
-
-        DROP VIEW IF EXISTS submit_node;
-
-        CREATE VIEW submit_node
-        AS
-        SELECT
-            resource.name,
-            active,
-            fqdn,
-            prod,
-            us,
-            resourcegroup
-        FROM resource
-        INNER JOIN service ON resource.name = service.resource_name
-        WHERE service.name = "Submit Node"
-        ;
-
-        DROP VIEW IF EXISTS gridftp;
-
-        CREATE VIEW gridftp
-        AS
-        SELECT
-            resource.name,
-            active,
-            fqdn,
-            resourcegroup,
-            resource.description
-        FROM resource
-        INNER JOIN service ON resource.name = service.resource_name
-        WHERE service.name = "GridFtp"
-        ;
-
-        DROP VIEW IF EXISTS xcache;
-
-        CREATE VIEW xcache
-        AS
-        SELECT
-            resource.name,
-            active,
-            fqdn,
-            resourcegroup,
-            resource.description
-        FROM resource
-        INNER JOIN service ON resource.name = service.resource_name
-        WHERE service.name = "XRootD cache server"
-        ;
-
-        DROP VIEW IF EXISTS xorigin;
-
-        CREATE VIEW xorigin
-        AS
-        SELECT
-            resource.name,
-            active,
-            fqdn,
-            resourcegroup,
-            resource.description
-        FROM resource
-        INNER JOIN service ON resource.name = service.resource_name
-        WHERE service.name = "XRootD origin server"
-        ;
-"""
-    )
+        """)
+    add_service_view(db, "ce", "CE", ["hosted", "prod", "us", "tags"])
+    add_service_view(db, "submit_node", "Submit Node", ["prod", "us"])
+    add_service_view(db, "gridftp", "GridFtp")
+    add_service_view(db, "xcache", "XRootD cache server")
+    add_service_view(db, "xorigin", "XRootD origin server")
+    add_service_view(db, "pcache", "Pelican cache")
+    add_service_view(db, "porigin", "Pelican origin")
 
     # Inefficient but the gridtype is a characteristic of the RG, not the
     # resource, so the XML queries would have been more annoying
