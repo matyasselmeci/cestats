@@ -58,7 +58,9 @@ def safe_elem_text(elem: ET.Element) -> str:
     return elem.text.strip() if hasattr(elem, "text") else ""
 
 
-def add_service_view(db, view_name: str, service_name: str, extra_columns: t.List[str] = None):
+def add_service_view(
+    db, view_name: str, service_name: str, extra_columns: t.List[str] = None
+):
     service_columns = [
         "resource.name",
         "active",
@@ -67,17 +69,21 @@ def add_service_view(db, view_name: str, service_name: str, extra_columns: t.Lis
         "resource.description",
     ] + (extra_columns or [])
 
-    script = f"""
+    script = (
+        f"""
 DROP VIEW IF EXISTS {view_name};
 CREATE VIEW {view_name}
 AS
 SELECT
-""" + ",\n".join(service_columns) + f"""
+"""
+        + ",\n".join(service_columns)
+        + f"""
 FROM resource
 INNER JOIN service ON resource.name = service.resource_name
 WHERE service.name = "{service_name}"
 ;
 """
+    )
     return db.executescript(script)
 
 
@@ -126,7 +132,8 @@ def main(argv):
             FOREIGN KEY (resource_name)
               REFERENCES resource (name)
         );
-        """)
+        """
+    )
     add_service_view(db, "ce", "CE", ["hosted", "prod", "us", "tags"])
     add_service_view(db, "submit_node", "Submit Node", ["prod", "us"])
     add_service_view(db, "gridftp", "GridFtp")
