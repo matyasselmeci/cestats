@@ -6,7 +6,6 @@ import sqlite3
 import sys
 import typing as t
 import xml.etree.ElementTree as ET
-from distutils.util import strtobool
 
 US_TLDS = {"net", "gov", "edu", "org", "com"}
 WAYS_TO_SPELL_UNITED_STATES = {
@@ -18,6 +17,10 @@ WAYS_TO_SPELL_UNITED_STATES = {
     "puerto rico",
     "unites states",
 }
+
+
+def strtobool(a_str: str) -> bool:
+    return a_str.lower().strip() in {"y", "yes", "1", "on", "true", "t"}
 
 
 def is_us_fqdn(fqdn):
