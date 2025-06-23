@@ -57,8 +57,74 @@ def get_resources_with_fqdns_and_services(resourcegroup):
     ]
 
 
+def safe_find_text(elem: ET.Element, match: str) -> str:
+    try:
+        return safe_elem_text(elem.find(match))
+    except AttributeError:
+        return ""
+
+
 def safe_elem_text(elem: ET.Element) -> str:
     return elem.text.strip() if hasattr(elem, "text") else ""
+
+
+def create_tables_and_views(db):
+    db.executescript(
+        """
+        DROP TABLE IF EXISTS resourcegroup;
+
+        CREATE TABLE resourcegroup
+        (
+            name         TEXT PRIMARY KEY,
+            facility     TEXT,
+            addressline1 TEXT,
+            city         TEXT,
+            country      TEXT,
+            latitude     REAL,
+            longitude    REAL,
+            state        TEXT,
+            zipcode      TEXT
+        );
+
+        DROP TABLE IF EXISTS resource;
+
+        CREATE TABLE resource
+        (
+            name                 TEXT PRIMARY KEY,
+            active               INTEGER,
+            fqdn                 TEXT,
+            hosted               INTEGER,
+            prod                 INTEGER,
+            us                   INTEGER,
+            resourcegroup        TEXT,
+            description          TEXT,
+            wlcg_accounting_name TEXT,
+            tags                 TEXT,
+            FOREIGN KEY (resourcegroup)
+                REFERENCES resourcegroup (name)
+        );
+
+        DROP TABLE IF EXISTS service;
+
+        CREATE TABLE service
+        (
+            name          TEXT,
+            resource_name TEXT,
+            description   TEXT,
+            UNIQUE (name, resource_name),
+            FOREIGN KEY (resource_name)
+                REFERENCES resource (name)
+        );
+        """
+    )
+    add_service_view(db, "ce", "CE", ["hosted", "prod", "us", "tags"])
+    add_service_view(db, "submit_node", "Submit Node", ["prod", "us"])
+    add_service_view(db, "gridftp", "GridFtp")
+    add_service_view(db, "xcache", "XRootD cache server")
+    add_service_view(db, "xorigin", "XRootD origin server")
+    add_service_view(db, "pcache", "Pelican cache")
+    add_service_view(db, "porigin", "Pelican origin")
+    add_service_view(db, "ep", "Execution Endpoint")
 
 
 def add_service_view(
@@ -90,6 +156,92 @@ WHERE service.name = "{service_name}"
     return db.executescript(script)
 
 
+def parse_and_store_resourcegroup(cursor, resourcegroup):
+    rg_dict = dict()
+    rg_dict["name"] = resourcegroup.find("./GroupName").text.strip()
+    rg_dict["facility"] = resourcegroup.find("./Facility/Name").text.strip()
+    # Map XML elements under Site to columns
+    # fmt:off
+    for colname, elemname in [
+        ("addressline1",    "AddressLine1"),
+        ("city",            "City"),
+        ("country",         "Country"),
+        ("latitude",        "Latitude"),
+        ("longitude",       "Longitude"),
+        ("state",           "State"),
+        ("zipcode",         "Zipcode"),
+    ]:
+    # fmt:on
+        val = safe_find_text(resourcegroup, f"./Site/{elemname}")
+        try:
+            if elemname in {"Latitude", "Longitude"}:
+                val = float(val)
+        except ValueError:
+            pass
+        rg_dict[colname] = val
+    # fmt:off
+    cursor.execute(
+        "INSERT INTO resourcegroup "
+        "( name,  facility,  addressline1,  city,  country,  latitude,  longitude,  state,  zipcode) "
+        "VALUES "
+        "(:name, :facility, :addressline1, :city, :country, :latitude, :longitude, :state, :zipcode)",
+        rg_dict,
+    )
+    # fmt:on
+    return rg_dict
+
+
+def parse_and_store_resource(cursor, fqdn, prod, res, resourcegroup_name, country):
+    name = res.find("./Name").text.strip()
+    active = strtobool(res.find("./Active").text.strip())
+    fqdn = fqdn.lower()
+    hosted = is_hosted_fqdn(fqdn)
+    us = (
+        country.lower() in WAYS_TO_SPELL_UNITED_STATES
+        if country
+        else is_us_fqdn(fqdn)
+    )
+    description = res.find("./Description").text.strip()
+    tags = ",".join(
+        sorted(safe_elem_text(e).upper() for e in res.findall("./Tags/Tag"))
+    )
+    wlcg_accounting_name = None
+    wlcg_accounting_name_elem = res.find("./WLCGInformation/AccountingName")
+    if (
+            wlcg_accounting_name_elem is not None
+            and wlcg_accounting_name_elem.text is not None
+    ):
+        wlcg_accounting_name = wlcg_accounting_name_elem.text.strip()
+    cursor.execute(
+        "INSERT INTO resource (name, active, fqdn, hosted, prod, us, wlcg_accounting_name, resourcegroup, description, tags) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            name,
+            active,
+            fqdn,
+            hosted,
+            prod,
+            us,
+            wlcg_accounting_name,
+            resourcegroup_name,
+            description,
+            tags,
+        ),
+    )
+    return name
+
+
+def parse_and_store_services(cursor, resource_name, services):
+    for svc in services:
+        svc_name = svc.find("./Name").text.strip()
+        svc_description = svc.find("./Description").text.strip()
+        cursor.execute(
+            "INSERT INTO service (name, resource_name, description) "
+            "VALUES (?, ?, ?)",
+            (svc_name, resource_name, svc_description),
+        )
+
+
 def main(argv):
     try:
         dbname = argv[1]
@@ -98,123 +250,37 @@ def main(argv):
 
     db = sqlite3.connect(dbname)
 
-    db.executescript(
-        """
-        DROP TABLE IF EXISTS resourcegroup;
-
-        CREATE TABLE resourcegroup(
-            name TEXT PRIMARY KEY,
-            facility TEXT,
-            country TEXT
-        );
-
-        DROP TABLE IF EXISTS resource;
-
-        CREATE TABLE resource(
-            name TEXT PRIMARY KEY,
-            active INTEGER,
-            fqdn TEXT,
-            hosted INTEGER,
-            prod INTEGER,
-            us INTEGER,
-            resourcegroup TEXT,
-            description TEXT,
-            wlcg_accounting_name TEXT,
-            tags TEXT,
-            FOREIGN KEY (resourcegroup)
-              REFERENCES resourcegroup (name)
-        );
-
-        DROP TABLE IF EXISTS service;
-
-        CREATE TABLE service(
-            name TEXT,
-            resource_name TEXT,
-            description TEXT,
-            UNIQUE (name, resource_name),
-            FOREIGN KEY (resource_name)
-              REFERENCES resource (name)
-        );
-        """
-    )
-    add_service_view(db, "ce", "CE", ["hosted", "prod", "us", "tags"])
-    add_service_view(db, "submit_node", "Submit Node", ["prod", "us"])
-    add_service_view(db, "gridftp", "GridFtp")
-    add_service_view(db, "xcache", "XRootD cache server")
-    add_service_view(db, "xorigin", "XRootD origin server")
-    add_service_view(db, "pcache", "Pelican cache")
-    add_service_view(db, "porigin", "Pelican origin")
+    create_tables_and_views(db)
 
     # Inefficient but the gridtype is a characteristic of the RG, not the
     # resource, so the XML queries would have been more annoying
     prod_tree = get_tree("gridtype=on&gridtype_1=on")
     itb_tree = get_tree("gridtype=on&gridtype_2=on")
 
-    cur = db.cursor()
+    cursor = db.cursor()
     for tree, prod in [(prod_tree, True), (itb_tree, False)]:
         for resourcegroup in tree.findall("./ResourceGroup"):
-            resourcegroup_name = resourcegroup.find("./GroupName").text.strip()
-            facility = resourcegroup.find("./Facility/Name").text.strip()
-            country = ""
-            try:
-                country = resourcegroup.find("./Site/Country").text.strip()
-            except AttributeError:
-                pass
-
             resources = get_resources_with_fqdns_and_services(resourcegroup)
-            if not resources:
+            if not resources:  # skip RGs with no resources
                 continue
-            cur.execute(
-                "INSERT INTO resourcegroup (name, facility, country) "
-                "VALUES (?, ?, ?)",
-                (resourcegroup_name, facility, country),
+
+            rg_dict = parse_and_store_resourcegroup(
+                cursor,
+                resourcegroup
             )
+            resourcegroup_name = rg_dict["name"]
+            country = rg_dict["country"]
 
             for res, fqdn, services in resources:
-                name = res.find("./Name").text.strip()
-                active = strtobool(res.find("./Active").text.strip())
-                fqdn = fqdn.lower()
-                hosted = is_hosted_fqdn(fqdn)
-                us = (
-                    country.lower() in WAYS_TO_SPELL_UNITED_STATES
-                    if country
-                    else is_us_fqdn(fqdn)
+                resource_name = parse_and_store_resource(
+                    cursor,
+                    fqdn,
+                    prod,
+                    res,
+                    resourcegroup_name,
+                    country
                 )
-                description = res.find("./Description").text.strip()
-                tags = ",".join(
-                    sorted(safe_elem_text(e).upper() for e in res.findall("./Tags/Tag"))
-                )
-                wlcg_accounting_name = None
-                wlcg_accounting_name_elem = res.find("./WLCGInformation/AccountingName")
-                if (
-                    wlcg_accounting_name_elem is not None
-                    and wlcg_accounting_name_elem.text is not None
-                ):
-                    wlcg_accounting_name = wlcg_accounting_name_elem.text.strip()
-                cur.execute(
-                    "INSERT INTO resource (name, active, fqdn, hosted, prod, us, wlcg_accounting_name, resourcegroup, description, tags) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        name,
-                        active,
-                        fqdn,
-                        hosted,
-                        prod,
-                        us,
-                        wlcg_accounting_name,
-                        resourcegroup_name,
-                        description,
-                        tags,
-                    ),
-                )
-                for svc in services:
-                    svc_name = svc.find("./Name").text.strip()
-                    svc_description = svc.find("./Description").text.strip()
-                    cur.execute(
-                        "INSERT INTO service (name, resource_name, description) "
-                        "VALUES (?, ?, ?)",
-                        (svc_name, name, svc_description),
-                    )
+                parse_and_store_services(cursor, resource_name, services)
 
     db.commit()
 
